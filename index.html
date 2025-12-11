@@ -1,179 +1,228 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cut Infection Risk Detector</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cut Infection Risk Detector</title>
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<!-- TFJS + Teachable Machine -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest"></script>
 
-    <style>
-        body {
-            margin: 0;
-            font-family: "Inter", sans-serif;
-            background: #f4f6f9;
-            color: #333;
-        }
+<style>
+/* ---------------------------------------------------------
+    GLOBAL APPLE “LIQUID GLASS” LOOK
+---------------------------------------------------------- */
 
-        header {
-            background: #1f6feb;
-            color: white;
-            padding: 30px 20px;
-            text-align: center;
-            box-shadow: 0px 3px 6px rgba(0,0,0,0.15);
-        }
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial;
+    background: linear-gradient(135deg, #e8eef5 0%, #ffffff 100%);
+    padding: 40px;
+    text-align: center;
+    transition: 0.4s ease;
+}
 
-        h1 {
-            margin: 0;
-            font-size: 2rem;
-        }
+/* Dark Mode */
+body.dark {
+    background: linear-gradient(135deg, #0f0f0f, #1a1a1a);
+    color: white;
+}
 
-        .section {
-            max-width: 900px;
-            margin: 30px auto;
-            background: white;
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0px 3px 10px rgba(0,0,0,0.1);
-        }
+/* Frosted Glass Card */
+.card {
+    width: 80%;
+    max-width: 700px;
+    margin: auto;
+    padding: 30px;
+    border-radius: 30px;
+    backdrop-filter: blur(20px);
+    background: rgba(255, 255, 255, 0.30);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    transition: 0.4s ease;
+}
 
-        .btn {
-            background: #1f6feb;
-            border: none;
-            padding: 12px 20px;
-            color: white;
-            font-size: 1rem;
-            border-radius: 10px;
-            cursor: pointer;
-            margin-right: 10px;
-            margin-bottom: 15px;
-            transition: 0.2s;
-        }
-        .btn:hover {
-            background: #1652b5;
-        }
+body.dark .card {
+    background: rgba(30, 30, 30, 0.3);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+}
 
-        #webcam-container {
-            margin-top: 20px;
-        }
+/* Title */
+h1 {
+    font-weight: 700;
+    font-size: 34px;
+    margin-bottom: 20px;
+}
 
-        #label-container div {
-            background: #eef2fa;
-            padding: 10px;
-            border-radius: 8px;
-            margin-top: 8px;
-            font-weight: 600;
-        }
-    </style>
+/* Buttons Apple Style */
+button {
+    margin: 12px;
+    padding: 12px 22px;
+    border-radius: 14px;
+    border: none;
+    background: rgba(255,255,255,0.5);
+    backdrop-filter: blur(10px);
+    font-size: 17px;
+    cursor: pointer;
+    transition: 0.3s ease;
+}
+
+button:hover {
+    background: rgba(255,255,255,0.8);
+    transform: translateY(-2px);
+}
+
+body.dark button {
+    background: rgba(50,50,50,0.4);
+    color: white;
+}
+
+body.dark button:hover {
+    background: rgba(70,70,70,0.6);
+}
+
+/* Timer */
+#timer {
+    margin-top: 10px;
+    font-size: 22px;
+    font-weight: 600;
+    padding: 8px 0;
+}
+
+/* Webcam */
+#webcam-container {
+    margin-top: 25px;
+}
+
+/* Predictions */
+#label-container div {
+    margin: 5px 0;
+    font-size: 18px;
+    font-weight: 500;
+}
+
+/* Dark mode toggle */
+.toggle-dark {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+}
+</style>
 </head>
 
 <body>
 
-<header>
+<!-- Dark Mode Button -->
+<button class="toggle-dark" onclick="toggleDarkMode()">🌙</button>
+
+<div class="card">
     <h1>Cut Infection Risk Detector</h1>
-    <p>Using Machine Learning to Identify If a Hand Cut Could Be a Risk</p>
-</header>
-
-<div class="section">
-    <h2>🔍 About This Project</h2>
-    <p>
-        This project uses a Teachable Machine image model to help detect the risk level of a cut on your hand:
-        <strong>safe, needs attention, or high-risk.</strong>
+    <p style="font-size:17px; opacity:0.7;">
+        Uses a Teachable Machine model to check if a hand cut may be at risk of infection.
     </p>
-    <p>
-        It is not medical advice—it's a school machine learning demo showing how AI can classify images in real time.
-    </p>
-</div>
 
-<div class="section">
-    <h2>📸 Instructions</h2>
-    <ul>
-        <li>Click <strong>Start</strong> to turn on the webcam.</li>
-        <li>Hold your hand close to the camera.</li>
-        <li>The AI will predict for 5 seconds, then stop.</li>
-        <li>Click <strong>Reset</strong> to run the detection again.</li>
-    </ul>
+    <button onclick="init()">Start Webcam</button>
+    <button onclick="startTimedPrediction()">Make Prediction</button>
+    <button onclick="stopTimer()">Stop Prediction</button>
+    <button onclick="resetTimer()">Reset Timer</button>
 
-    <button class="btn" onclick="init()">Start</button>
-    <button class="btn" onclick="resetDetection()">Reset</button>
+    <div id="timer">Timer: 0</div>
 
     <div id="webcam-container"></div>
     <div id="label-container"></div>
 </div>
 
-<!-- TensorFlow + Teachable Machine -->
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
-
 <script>
-    const URL = "./my_model/";
+/* ----------------------------
+   MODEL + WEBCAM SETUP
+-----------------------------*/
 
-    let model, webcam, labelContainer, maxPredictions;
-    let running = false;     
-    let stopTimeout = null;  
+const URL = "./my_model/";
 
-    async function init() {
-        if (running) return;  
-        running = true;
+let model, webcam, labelContainer, maxPredictions;
+let timer = 0;
+let timerInterval = null;
+let allowPrediction = false;
 
-        const modelURL = URL + "model.json";
-        const metadataURL = URL + "metadata.json";
+async function init() {
+    const modelURL = URL + "model.json";
+    const metadataURL = URL + "metadata.json";
 
-        model = await tmImage.load(modelURL, metadataURL);
-        maxPredictions = model.getTotalClasses();
+    model = await tmImage.load(modelURL, metadataURL);
+    maxPredictions = model.getTotalClasses();
 
-        const flip = true;
-        webcam = new tmImage.Webcam(250, 250, flip);
-        await webcam.setup();
-        await webcam.play();
+    webcam = new tmImage.Webcam(200, 200, true);
+    await webcam.setup();
+    await webcam.play();
 
-        document.getElementById("webcam-container").innerHTML = "";
-        document.getElementById("webcam-container").appendChild(webcam.canvas);
+    document.getElementById("webcam-container").appendChild(webcam.canvas);
 
-        labelContainer = document.getElementById("label-container");
-        labelContainer.innerHTML = "";
-        for (let i = 0; i < maxPredictions; i++) {
-            labelContainer.appendChild(document.createElement("div"));
+    labelContainer = document.getElementById("label-container");
+    labelContainer.innerHTML = "";
+    for (let i = 0; i < maxPredictions; i++) {
+        labelContainer.appendChild(document.createElement("div"));
+    }
+
+    window.requestAnimationFrame(webcamLoop);
+}
+
+function webcamLoop() {
+    webcam.update();
+    if (allowPrediction) predict();
+    window.requestAnimationFrame(webcamLoop);
+}
+
+async function predict() {
+    const prediction = await model.predict(webcam.canvas);
+
+    for (let i = 0; i < maxPredictions; i++) {
+        labelContainer.childNodes[i].innerHTML =
+            prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+    }
+}
+
+/* ----------------------------
+   TIMER LOGIC
+-----------------------------*/
+
+function startTimedPrediction() {
+    allowPrediction = true;
+    timer = 3;
+    updateTimerText();
+
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+        timer--;
+        updateTimerText();
+
+        if (timer <= 0) {
+            clearInterval(timerInterval);
+            allowPrediction = false;
         }
+    }, 1000);
+}
 
-        window.requestAnimationFrame(loop);
+function stopTimer() {
+    clearInterval(timerInterval);
+}
 
-        stopTimeout = setTimeout(() => {
-            running = false;
-        }, 5000);
-    }
+function resetTimer() {
+    clearInterval(timerInterval);
+    timer = 3;
+    updateTimerText();
+}
 
-    async function loop() {
-        if (!running) return;
+function updateTimerText() {
+    document.getElementById("timer").innerText = "Timer: " + timer;
+}
 
-        webcam.update();
-        await predict();
-        window.requestAnimationFrame(loop);
-    }
+/* ----------------------------
+   DARK MODE
+-----------------------------*/
 
-    async function predict() {
-        const prediction = await model.predict(webcam.canvas);
-
-        for (let i = 0; i < maxPredictions; i++) {
-            const classPrediction =
-                prediction[i].className + ": " +
-                (prediction[i].probability * 100).toFixed(1) + "%";
-
-            labelContainer.childNodes[i].innerHTML = classPrediction;
-        }
-    }
-
-    function resetDetection() {
-        running = false;
-        clearTimeout(stopTimeout);
-
-        if (webcam) webcam.stop();
-
-        document.getElementById("webcam-container").innerHTML = "";
-        document.getElementById("label-container").innerHTML = "";
-
-        setTimeout(() => init(), 300);
-    }
+function toggleDarkMode() {
+    document.body.classList.toggle("dark");
+}
 </script>
 
 </body>
