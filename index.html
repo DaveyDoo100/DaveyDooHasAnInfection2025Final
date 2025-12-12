@@ -1,329 +1,222 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Liquid Glass Infection Detector</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Liquid Glass Cut Detector</title>
 
-<!-- TensorFlow + Teachable Machine -->
+<!-- TensorFlow & Teachable Machine -->
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest"></script>
 
 <style>
-  :root{
-    --glass-border: rgba(255,255,255,0.09);
-    --glass-bg: rgba(255,255,255,0.04);
-    --accent: #6ea8ff;
-  }
-  *{box-sizing:border-box}
-  body{
+  body {
     margin:0;
-    font-family:-apple-system, "SF Pro Text", "Segoe UI", Roboto, Arial, sans-serif;
-    background: radial-gradient(circle at 10% 10%, #291b44 0%, #090612 60%);
-    color: #fff;
+    padding:30px;
+    background:#0d0d0f;
+    font-family:-apple-system, "SF Pro Text", Segoe UI, Roboto;
     display:flex;
     justify-content:center;
-    padding:30px;
-    min-height:100vh;
+    color:white;
   }
 
-  .card{
-    width:100%; max-width:920px;
-    border-radius:20px;
-    padding:22px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-    border:1px solid var(--glass-border);
-    backdrop-filter: blur(20px) saturate(160%);
-    -webkit-backdrop-filter: blur(20px) saturate(160%);
-    box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+  .card {
+    width:100%;
+    max-width:880px;
+    padding:20px;
+    border-radius:22px;
+    background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.15);
+    backdrop-filter:blur(22px) saturate(180%);
   }
 
-  .header{
+  .header {
     display:flex;
     align-items:center;
     gap:14px;
   }
 
-  /* SVG logo container */
-  .logo{
-    width:54px; height:54px; border-radius:12px;
-    background: linear-gradient(135deg,#6a55ff,#2bb0ff);
-    display:flex; align-items:center; justify-content:center;
-    box-shadow: 0 8px 26px rgba(43,155,255,0.12), inset 0 -6px 20px rgba(0,0,0,0.18);
+  .logo {
+    width:55px;
+    height:55px;
+    border-radius:16px;
+    background:white;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 8px 28px rgba(255,255,255,0.18);
   }
 
-  h1{
-    margin:0; font-size:20px; font-weight:700;
-  }
+  h1 { margin:0; font-size:21px; }
 
-  .controls{
+  .controls {
     margin-top:20px;
-    display:flex; gap:12px; flex-wrap:wrap;
+    display:flex;
+    gap:14px;
+    flex-wrap:wrap;
   }
 
-  .lg-btn{
-    padding:10px 16px;
-    border-radius:12px;
-    border:1px solid rgba(255,255,255,0.06);
-    background:var(--glass-bg);
-    color:#fff;
+  .btn {
+    padding:12px 18px;
+    border-radius:14px;
+    background:rgba(255,255,255,0.32);
+    border:1px solid rgba(255,255,255,0.6);
+    color:black;
     font-weight:700;
     cursor:pointer;
-    transition: transform .16s ease, background .16s ease;
-    backdrop-filter: blur(12px);
+    backdrop-filter:blur(18px);
+    transition:0.2s ease;
   }
-  .lg-btn:hover{ transform: translateY(-3px); background: rgba(255,255,255,0.08); }
-
-  .status{
-    margin-top:16px; display:flex; gap:18px; align-items:center; flex-wrap:wrap;
-    font-size:14px; opacity:0.95;
-  }
-  .timer{
-    padding:6px 10px; border-radius:10px; background: rgba(255,255,255,0.02);
-    border:1px solid rgba(255,255,255,0.04);
-    font-weight:700;
+  .btn:hover {
+    background:white;
+    transform:translateY(-3px);
   }
 
-  .webcam-area{
-    margin-top:20px;
-    display:flex; gap:18px; align-items:flex-start; flex-wrap:wrap;
+  .webcam-area { margin-top:20px; display:flex; gap:20px; flex-wrap:wrap; }
+
+  #webcam-container {
+    width:420px;
+    height:320px;
+    border-radius:16px;
+    overflow:hidden;
+    background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.4);
+    display:flex;
+    align-items:center;
+    justify-content:center;
   }
 
-  #webcam-container{
-    width:420px; height:320px; border-radius:14px; overflow:hidden;
-    background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));
-    border:1px solid rgba(255,255,255,0.06);
-    box-shadow: 0 18px 40px rgba(0,0,0,0.55);
-    display:flex; align-items:center; justify-content:center;
-  }
-  canvas{ width:100%; height:100%; display:block; }
+  #label-container { flex:1; display:flex; flex-direction:column; gap:12px; }
 
-  #label-container{ flex:1 1 360px; display:flex; flex-direction:column; gap:10px; }
-  .label{
-    padding:12px 14px; border-radius:12px;
-    background: linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));
-    border:1px solid rgba(255,255,255,0.04);
-    display:flex; justify-content:space-between; align-items:center;
-    font-weight:700;
-  }
-  .prob{ color:var(--accent); }
-  .small{ font-size:13px; opacity:0.85; }
-
-  @media (max-width:880px){
-    #webcam-container{ width:320px; height:240px; }
+  .label {
+    padding:10px 14px;
+    border-radius:14px;
+    background:rgba(255,255,255,0.12);
+    border:1px solid rgba(255,255,255,0.3);
+    font-weight:600;
+    display:flex;
+    justify-content:space-between;
   }
 </style>
 </head>
+
 <body>
 
-<div class="card" role="main" aria-label="Liquid Glass Infection Detector">
+<div class="card">
+
   <div class="header">
-    <div class="logo" aria-hidden="true">
-      <!-- Simple SVG logo: crystal droplet -->
-      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <defs>
-          <linearGradient id="g1" x1="0" x2="1" y1="0" y2="1">
-            <stop offset="0" stop-color="#ffffff" stop-opacity="0.95"/>
-            <stop offset="1" stop-color="#d6f0ff" stop-opacity="0.9"/>
-          </linearGradient>
-        </defs>
-        <path d="M12 2C12 2 7 8 7 12.5C7 16.6421 9.79086 19 12 19C14.2091 19 17 16.6421 17 12.5C17 8 12 2 12 2Z" fill="url(#g1)"/>
-        <circle cx="12" cy="11" r="2.2" fill="#7ab8ff" opacity="0.9"/>
+    <div class="logo">
+      <!-- Apple-like liquid droplet -->
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="#0d0d0f">
+        <path d="M12 2s-6 7-6 11.5S9.5 20 12 20s6-2.5 6-6.5S12 2 12 2z"/>
       </svg>
     </div>
-
-    <div>
-      <h1>Liquid Glass — Cut Detector</h1>
-    </div>
+    <h1>Liquid Glass — Cut Detector</h1>
   </div>
 
-  <div class="controls" role="group" aria-label="Controls">
-    <button id="startBtn" class="lg-btn" title="Only starts the webcam">Start Webcam</button>
-    <button id="makeBtn"  class="lg-btn" title="Run predictions for 3 seconds">Make Prediction (3s)</button>
-    <button id="stopTimerBtn" class="lg-btn" title="Stop timer and go to continuous predictions">Stop Prediction Timer</button>
-    <button id="resetBtn" class="lg-btn" title="Restart the 3s timer">Reset Timer</button>
-  </div>
-
-  <div class="status">
-    <div class="timer" id="timerBox">Timer: —</div>
-    <div class="small" id="webcamStatus">Webcam: off</div>
-    <div class="small">Mode: <strong id="modeText">idle</strong></div>
+  <div class="controls">
+    <button id="startBtn" class="btn">Start Webcam</button>
+    <button id="predictBtn" class="btn">Make Prediction (3s)</button>
+    <button id="stopBtn" class="btn">Stop Prediction Timer</button>
+    <button id="resetBtn" class="btn">Reset Timer</button>
   </div>
 
   <div class="webcam-area">
-    <div id="webcam-container"><div class="small" style="opacity:0.7">Webcam not started</div></div>
-    <div id="label-container" aria-live="polite"></div>
+    <div id="webcam-container">Webcam Off</div>
+    <div id="label-container"></div>
   </div>
+
 </div>
 
 <script>
-  // Path to model folder
-  const MODEL_URL = './my_model/';
+const MODEL_URL = "./my_model/";
+let model, webcam, rafID;
 
-  // State
-  let model = null;
-  let webcam = null;
-  let rafId = null;
+let mode = "idle";            // "idle" | "timed" | "continuous"
+let timer = null;
+let timerInterval = null;
 
-  // modes: 'idle' | 'timed' | 'continuous'
-  let mode = 'idle';
-  let timer = null;
-  let timerInterval = null;
-
-  // Elements
-  const startBtn = document.getElementById('startBtn');
-  const makeBtn  = document.getElementById('makeBtn');
-  const stopTimerBtn = document.getElementById('stopTimerBtn');
-  const resetBtn = document.getElementById('resetBtn');
-  const timerBox = document.getElementById('timerBox');
-  const webcamStatus = document.getElementById('webcamStatus');
-  const modeText = document.getElementById('modeText');
-  const webcamContainer = document.getElementById('webcam-container');
-  const labelContainer = document.getElementById('label-container');
-
-  function setMode(m){
-    mode = m;
-    modeText.textContent = m;
+async function loadModel() {
+  if (!model) {
+    model = await tmImage.load(MODEL_URL + "model.json", MODEL_URL + "metadata.json");
   }
-  function setTimerDisplay(n){
-    timerBox.textContent = (n === null ? 'Timer: —' : 'Timer: ' + n + 's');
-  }
-  function setWebcamStatus(on){
-    webcamStatus.textContent = on ? 'Webcam: on' : 'Webcam: off';
-  }
+}
 
-  window.addEventListener('beforeunload', () => {
-    if (webcam && webcam.webcam && webcam.webcam.srcObject){
-      webcam.webcam.srcObject.getTracks().forEach(t => t.stop());
+async function startWebcam() {
+  await loadModel();
+
+  if (!webcam) {
+    webcam = new tmImage.Webcam(420, 320, true);
+    await webcam.setup();
+  }
+  await webcam.play();
+
+  const wc = document.getElementById("webcam-container");
+  wc.innerHTML = "";
+  wc.appendChild(webcam.canvas);
+
+  mode = "continuous";
+
+  if (!rafID) rafID = requestAnimationFrame(loop);
+}
+
+async function startTimedPrediction() {
+  await startWebcam();
+  mode = "timed";
+
+  if (timerInterval) clearInterval(timerInterval);
+  timer = 3;
+
+  timerInterval = setInterval(() => {
+    timer--;
+    if (timer <= 0) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      mode = "idle"; // stop predicting
     }
-    if (rafId) cancelAnimationFrame(rafId);
-    if (timerInterval) clearInterval(timerInterval);
+  }, 1000);
+}
+
+function resetTimer() {
+  startTimedPrediction();
+}
+
+function stopPredictionTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = null;
+  mode = "continuous"; // go back to always predicting
+}
+
+async function loop() {
+  webcam.update();
+
+  if ((mode === "continuous" || mode === "timed") && model) {
+    const preds = await model.predict(webcam.canvas);
+    renderPredictions(preds);
+  }
+
+  rafID = requestAnimationFrame(loop);
+}
+
+function renderPredictions(preds) {
+  const container = document.getElementById("label-container");
+  container.innerHTML = "";
+  preds.forEach(p => {
+    const div = document.createElement("div");
+    div.className = "label";
+    div.innerHTML = `
+      <span>${p.className}</span>
+      <span>${(p.probability * 100).toFixed(1)}%</span>
+    `;
+    container.appendChild(div);
   });
+}
 
-  // Ensure model loaded
-  async function ensureModel(){
-    if (!model){
-      model = await tmImage.load(MODEL_URL + 'model.json', MODEL_URL + 'metadata.json');
-    }
-    return model;
-  }
-
-  // Start webcam only (no predictions)
-  async function startWebcamOnly(){
-    if (!webcam){
-      webcam = new tmImage.Webcam(420, 320, true); // width, height, flip
-      await webcam.setup();
-      await webcam.play();
-      webcamContainer.innerHTML = '';
-      webcamContainer.appendChild(webcam.canvas);
-      setWebcamStatus(true);
-    }
-    // ensure RAF loop runs so we can update canvas but do NOT predict
-    if (!rafId) rafId = requestAnimationFrame(loop);
-    setMode('idle');          // explicitly idle — NO predictions
-    setTimerDisplay(null);
-    if (timerInterval){ clearInterval(timerInterval); timerInterval = null; }
-  }
-
-  // Start continuous predictions (used when user cancels timer)
-  async function startContinuousPredictions(){
-    await ensureModel();
-    await startWebcamOnly();
-    setMode('continuous');
-    setTimerDisplay(null);
-    if (!rafId) rafId = requestAnimationFrame(loop);
-  }
-
-  // Timed prediction for 3 seconds
-  async function startTimedPrediction(){
-    await ensureModel();
-    await startWebcamOnly();
-
-    // clear any previous timer
-    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-
-    timer = 3;
-    setTimerDisplay(timer);
-    setMode('timed');
-
-    // ensure RAF loop running
-    if (!rafId) rafId = requestAnimationFrame(loop);
-
-    timerInterval = setInterval(() => {
-      timer -= 1;
-      setTimerDisplay(timer);
-      if (timer <= 0){
-        clearInterval(timerInterval);
-        timerInterval = null;
-        timer = null;
-        setTimerDisplay(null);
-        // stop predicting after timer ends, but keep webcam on
-        setMode('idle');
-      }
-    }, 1000);
-  }
-
-  // Reset timer (restarts 3s timed prediction and ensures webcam on)
-  async function resetTimer(){
-    await startTimedPrediction();
-  }
-
-  // Stop Prediction Timer button — cancels timer and goes to continuous predictions
-  async function stopPredictionTimer(){
-    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-    timer = null;
-    setTimerDisplay(null);
-    await startContinuousPredictions();
-  }
-
-  // main animation loop — updates webcam, predicts only when mode !== 'idle'
-  async function loop(){
-    if (webcam) webcam.update();
-
-    if ((mode === 'timed' || mode === 'continuous') && model && webcam){
-      try{
-        const preds = await model.predict(webcam.canvas);
-        renderPredictions(preds);
-      }catch(e){
-        console.error('predict error', e);
-      }
-    }
-
-    rafId = requestAnimationFrame(loop);
-  }
-
-  function renderPredictions(preds){
-    labelContainer.innerHTML = '';
-    preds.forEach(p => {
-      const d = document.createElement('div');
-      d.className = 'label';
-      d.innerHTML = `<span>${p.className}</span><span class="prob">${(p.probability*100).toFixed(1)}%</span>`;
-      labelContainer.appendChild(d);
-    });
-  }
-
-  // Wire up buttons
-  startBtn.addEventListener('click', async () => {
-    // Start webcam only, do not predict
-    await startWebcamOnly();
-  });
-
-  makeBtn.addEventListener('click', async () => {
-    await startTimedPrediction();
-  });
-
-  stopTimerBtn.addEventListener('click', async () => {
-    await stopPredictionTimer();
-  });
-
-  resetBtn.addEventListener('click', async () => {
-    await resetTimer();
-  });
-
-  // initial UI state
-  setMode('idle');
-  setTimerDisplay(null);
-  setWebcamStatus(false);
+document.getElementById("startBtn").onclick = startWebcam;
+document.getElementById("predictBtn").onclick = startTimedPrediction;
+document.getElementById("stopBtn").onclick = stopPredictionTimer;
+document.getElementById("resetBtn").onclick = resetTimer;
 </script>
+
 </body>
 </html>
