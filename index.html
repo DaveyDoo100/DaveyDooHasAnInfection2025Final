@@ -1,22 +1,19 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Detector</title>
+<title>Infection Detector</title>
 
-<!-- GOOGLE FONT -->
-<link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;600&display=swap" rel="stylesheet">
-
-<!-- TEACHABLE MACHINE SCRIPTS (REQUIRED) -->
+<!-- REQUIRED for Teachable Machine -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.9.0"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest"></script>
 
 <style>
     body {
-        font-family: "SF Pro Display", sans-serif;
-        background: #000;
         margin: 0;
-        padding: 0;
+        background: #000;
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro", Arial, sans-serif;
         display: flex;
         justify-content: center;
         align-items: center;
@@ -25,50 +22,54 @@
     }
 
     .glass-box {
-        width: 360px;
+        width: 380px;
         padding: 25px;
-        border-radius: 25px;
-        background: rgba(255, 255, 255, 0.08);
-        backdrop-filter: blur(35px) saturate(180%);
-        box-shadow: 0 0 25px rgba(255, 255, 255, 0.15);
+        border-radius: 30px;
+        background: rgba(255,255,255,0.08);
+        backdrop-filter: blur(25px) saturate(180%);
+        -webkit-backdrop-filter: blur(25px) saturate(180%);
+        box-shadow: 0 0 25px rgba(255,255,255,0.05);
         text-align: center;
+        border: 1px solid rgba(255,255,255,0.1);
     }
 
     button {
         width: 90%;
-        padding: 14px;
+        padding: 15px;
+        margin: 6px 0;
         border-radius: 18px;
         border: none;
-        margin: 6px 0;
-        font-size: 16px;
         background: white;
         color: black;
-        cursor: pointer;
+        font-size: 16px;
         font-weight: 600;
+        cursor: pointer;
         transition: 0.2s;
     }
 
     button:hover {
-        transform: scale(1.03);
-        opacity: 0.9;
+        background: #e5e5e5;
     }
 
     #webcam {
-        margin-top: 15px;
-        border-radius: 20px;
         width: 100%;
+        border-radius: 22px;
+        margin-top: 14px;
         display: none;
-    }
-
-    .logo {
-        width: 65px;
-        margin-bottom: 10px;
+        background: black;
     }
 
     #label-container {
         margin-top: 12px;
-        font-size: 18px;
-        font-weight: 600;
+        font-size: 19px;
+        font-weight: bold;
+        letter-spacing: 0.5px;
+    }
+
+    #logo {
+        width: 80px;
+        margin-bottom: 15px;
+        filter: drop-shadow(0 0 8px rgba(255,255,255,0.3));
     }
 </style>
 </head>
@@ -77,8 +78,7 @@
 
 <div class="glass-box">
 
-    <!-- Your logo -->
-    <img src="logo.png" class="logo">
+    <img id="logo" src="logo.png" alt="Logo">
 
     <button onclick="startWebcam()">Start Webcam</button>
     <button onclick="startPredictionTimer()">Start Prediction Timer</button>
@@ -92,86 +92,82 @@
 <script>
 let model, webcam, maxPredictions;
 let timerActive = false;
-let timerID = null;
 
-// Load the Teachable Machine model
+// Load the model immediately
 async function loadModel() {
     const URL = "./my_model/";
     model = await tmImage.load(URL + "model.json", URL + "metadata.json");
     maxPredictions = model.getTotalClasses();
 }
-
 loadModel();
 
-// Start webcam ONLY
+// Only turns on the webcam
 async function startWebcam() {
     try {
         webcam = new tmImage.Webcam(300, 300, true);
         await webcam.setup();
         await webcam.play();
+
         document.getElementById("webcam").style.display = "block";
-        requestAnimationFrame(loopNoTimer);
-    } catch (error) {
-        document.getElementById("label-container").innerHTML = "WEBCAM ERROR:<br>" + error;
+        document.getElementById("webcam").srcObject = webcam.webcam.stream;
+
+        requestAnimationFrame(predictLoop);
+    } catch (err) {
+        document.getElementById("label-container").innerHTML =
+            "WEBCAM ERROR:<br>" + err;
     }
 }
 
-// Normal prediction loop (no timer)
-async function loopNoTimer() {
+// Continuous prediction loop (normal mode)
+async function predictLoop() {
     if (webcam) {
         webcam.update();
-        await predict();
-        requestAnimationFrame(loopNoTimer);
+        if (!timerActive) await predict();
+        requestAnimationFrame(predictLoop);
     }
 }
 
-// Timer-based prediction (stops after 3 seconds)
+// Start timer-based predictions for 3 seconds
 function startPredictionTimer() {
     if (!webcam) return;
-
     timerActive = true;
+
+    timedPredict();
 
     setTimeout(() => {
         timerActive = false;
-        document.getElementById("label-container").innerHTML += "<br><b>TIMER STOPPED</b>";
     }, 3000);
-
-    timedLoop();
 }
 
-async function timedLoop() {
+async function timedPredict() {
     if (timerActive && webcam) {
         webcam.update();
         await predict();
-        requestAnimationFrame(timedLoop);
+        requestAnimationFrame(timedPredict);
     }
 }
 
-// Stop only the TIMER — keep predictions running normally
 function stopPredictionTimer() {
     timerActive = false;
-    if (webcam) loopNoTimer();
 }
 
-// Reset and restart the timer
 function resetTimer() {
     timerActive = false;
     startPredictionTimer();
 }
 
-// Model prediction
 async function predict() {
     const prediction = await model.predict(webcam.canvas);
 
-    let highest = prediction[0];
+    let best = prediction[0];
     for (let i = 1; i < prediction.length; i++) {
-        if (prediction[i].probability > highest.probability) {
-            highest = prediction[i];
+        if (prediction[i].probability > best.probability) {
+            best = prediction[i];
         }
     }
 
     document.getElementById("label-container").innerHTML =
-        highest.className + ": " + (highest.probability * 100).toFixed(1) + "%";
+        best.className + " — " + (best.probability * 100).toFixed(1) + "%";
 }
 </script>
 
