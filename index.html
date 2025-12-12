@@ -1,108 +1,174 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Teachable Machine Image Model</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f4f4f4;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        h1 {
-            margin-bottom: 20px;
-        }
-        #container {
-            background: white;
-            padding: 20px;
-            border-radius: 16px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            width: 340px;
-            text-align: center;
-        }
-        #webcam-container canvas {
-            border-radius: 12px;
-            margin-bottom: 10px;
-        }
-        button {
-            background: #4CAF50;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-bottom: 15px;
-        }
-        button:hover {
-            background: #45a049;
-        }
-        #label-container div {
-            background: #eaeaea;
-            margin: 5px 0;
-            padding: 8px;
-            border-radius: 6px;
-            font-size: 14px;
-        }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Liquid Glass AI</title>
+
+<!-- TensorFlow + Teachable Machine -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+<style>
+    body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        background: #0d0d0d;
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+
+    .glass-card {
+        width: 380px;
+        padding: 25px;
+        border-radius: 25px;
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(30px) saturate(180%);
+        box-shadow: 0 0 40px rgba(255, 255, 255, 0.1);
+        text-align: center;
+    }
+
+    .logo {
+        width: 80px;
+        filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.4));
+        margin-bottom: 15px;
+    }
+
+    h2 {
+        margin-top: 0;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+
+    button {
+        width: 100%;
+        padding: 14px;
+        margin-top: 10px;
+        border: none;
+        border-radius: 14px;
+        background: white;
+        color: black;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    button:hover {
+        background: #dcdcdc;
+    }
+
+    #webcam-container {
+        margin-top: 20px;
+    }
+
+    #label-container div {
+        margin-top: 6px;
+        font-size: 14px;
+        background: rgba(255,255,255,0.12);
+        backdrop-filter: blur(10px);
+        padding: 6px 10px;
+        border-radius: 10px;
+    }
+</style>
 </head>
+
 <body>
-    <div id="container">
-        <h1>Teachable Machine Image Model</h1>
-        <button type="button" onclick="init()">Start</button>
-        <div id="webcam-container"></div>
-        <div id="label-container"></div>
-    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+<div class="glass-card">
+    <img class="logo" src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg">
+    <h2>Liquid Glass Classifier</h2>
 
-    <script type="text/javascript">
-        const URL = "./my_model/";
+    <button onclick="startWebcam()">Start Webcam</button>
+    <button onclick="startPredictionTimer()">Start Prediction Timer</button>
+    <button onclick="stopPredictionTimer()">Stop Prediction Timer</button>
+    <button onclick="resetPredictionTimer()">Reset Timer</button>
 
-        let model, webcam, labelContainer, maxPredictions;
+    <div id="webcam-container"></div>
+    <div id="label-container"></div>
+</div>
 
-        // Load the model and metadata — DO NOT TOUCH WEBCAM CODE
-        async function init() {
-            const modelURL = URL + "model.json";
-            const metadataURL = URL + "metadata.json";
+<script>
+const URL = "./my_model/";
+let model, webcam, labelContainer, maxPredictions;
 
-            model = await tmImage.load(modelURL, metadataURL);
-            maxPredictions = model.getTotalClasses();
+let timerRunning = false;
+let predictionInterval = null;
 
-            const flip = true;
-            webcam = new tmImage.Webcam(200, 200, flip); // DO NOT MODIFY
+// Load model automatically
+(async () => {
+    model = await tmImage.load(URL + "model.json", URL + "metadata.json");
+    maxPredictions = model.getTotalClasses();
 
-            await webcam.setup();
-            await webcam.play();
-            window.requestAnimationFrame(loop);
+    labelContainer = document.getElementById("label-container");
+    for (let i = 0; i < maxPredictions; i++) {
+        labelContainer.appendChild(document.createElement("div"));
+    }
+})();
 
-            document.getElementById("webcam-container").appendChild(webcam.canvas);
-            labelContainer = document.getElementById("label-container");
+// START ONLY WEBCAM
+async function startWebcam() {
+    if (!webcam) {
+        webcam = new tmImage.Webcam(250, 250, true);
+        await webcam.setup();
+        await webcam.play();
+        document.getElementById("webcam-container").appendChild(webcam.canvas);
+        window.requestAnimationFrame(loop);
+    }
+}
 
-            for (let i = 0; i < maxPredictions; i++) {
-                labelContainer.appendChild(document.createElement("div"));
-            }
-        }
+// MAIN LOOP
+async function loop() {
+    webcam.update();
+    await predict();
+    if (!timerRunning) window.requestAnimationFrame(loop);
+}
 
-        async function loop() {
-            webcam.update();
-            await predict();
-            window.requestAnimationFrame(loop);
-        }
+// ALWAYS MAKES PREDICTIONS
+async function predict() {
+    if (!model || !webcam) return;
+    const prediction = await model.predict(webcam.canvas);
+    for (let i = 0; i < maxPredictions; i++) {
+        labelContainer.childNodes[i].innerHTML =
+            prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+    }
+}
 
-        async function predict() {
-            const prediction = await model.predict(webcam.canvas);
-            for (let i = 0; i < maxPredictions; i++) {
-                const classPrediction = prediction[i].className + ": " + prediction[i].probability.toFixed(2);
-                labelContainer.childNodes[i].innerHTML = classPrediction;
-            }
-        }
-    </script>
+// START TIMER (3 SECONDS)
+function startPredictionTimer() {
+    if (!webcam) return alert("Start the webcam first.");
+
+    timerRunning = true;
+
+    predictionInterval = setInterval(() => {
+        webcam.stop();
+    }, 3000);
+}
+
+// STOP TIMER — returns to normal predictions
+function stopPredictionTimer() {
+    timerRunning = false;
+    clearInterval(predictionInterval);
+
+    if (webcam) {
+        webcam.play();
+        window.requestAnimationFrame(loop);
+    }
+}
+
+// RESET TIMER — restarts webcam and timer
+function resetPredictionTimer() {
+    if (!webcam) return;
+
+    clearInterval(predictionInterval);
+    timerRunning = false;
+
+    webcam.play();
+    window.requestAnimationFrame(loop);
+}
+</script>
+
 </body>
 </html>
