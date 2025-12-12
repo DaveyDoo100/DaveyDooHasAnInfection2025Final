@@ -13,64 +13,89 @@
     body {
         margin: 0;
         font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-        background: #0d0d0d;
+        background: #000000;
         color: white;
         display: flex;
         justify-content: center;
         align-items: center;
         height: 100vh;
+        overflow: hidden;
     }
 
+    /* Liquid Glass Card */
     .glass-card {
-        width: 380px;
-        padding: 25px;
-        border-radius: 25px;
-        background: rgba(255, 255, 255, 0.08);
-        backdrop-filter: blur(30px) saturate(180%);
-        box-shadow: 0 0 40px rgba(255, 255, 255, 0.1);
+        width: 420px;
+        padding: 30px;
+        border-radius: 30px;
+        background: rgba(255, 255, 255, 0.10);
+        backdrop-filter: blur(40px) saturate(180%);
+        -webkit-backdrop-filter: blur(40px) saturate(180%);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow: 0 0 60px rgba(255, 255, 255, 0.15);
         text-align: center;
+        animation: fadeIn 0.6s ease-out;
     }
 
+    @keyframes fadeIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+    }
+
+    /* Apple-style circular glowing logo */
     .logo {
-        width: 80px;
-        filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.4));
-        margin-bottom: 15px;
+        width: 85px;
+        height: 85px;
+        border-radius: 50%;
+        margin-bottom: 20px;
+        background: linear-gradient(145deg, #ffffff 0%, #dcdcdc 90%);
+        box-shadow: 
+            0 0 20px rgba(255, 255, 255, 0.45),
+            0 0 40px rgba(255, 255, 255, 0.20);
     }
 
     h2 {
-        margin-top: 0;
+        margin-top: 10px;
         font-weight: 600;
         letter-spacing: 0.5px;
+        text-shadow: 0 0 10px rgba(255,255,255,0.3);
     }
 
+    /* Liquid Glass Buttons */
     button {
         width: 100%;
         padding: 14px;
-        margin-top: 10px;
+        margin-top: 12px;
         border: none;
-        border-radius: 14px;
-        background: white;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.95);
         color: black;
         font-size: 15px;
         font-weight: 600;
         cursor: pointer;
         transition: 0.2s;
+        box-shadow: 0 0 20px rgba(255,255,255,0.25);
     }
     button:hover {
-        background: #dcdcdc;
+        background: #ffffff;
+        box-shadow: 0 0 35px rgba(255,255,255,0.45);
+        transform: translateY(-2px);
     }
 
     #webcam-container {
         margin-top: 20px;
+        border-radius: 12px;
+        overflow: hidden;
     }
 
     #label-container div {
-        margin-top: 6px;
+        margin-top: 8px;
         font-size: 14px;
-        background: rgba(255,255,255,0.12);
+        background: rgba(255,255,255,0.18);
         backdrop-filter: blur(10px);
-        padding: 6px 10px;
-        border-radius: 10px;
+        padding: 8px 12px;
+        border-radius: 12px;
+        text-shadow: 0 0 5px rgba(0,0,0,0.4);
+        animation: fadeIn 0.3s;
     }
 </style>
 </head>
@@ -78,8 +103,9 @@
 <body>
 
 <div class="glass-card">
-    <img class="logo" src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg">
-    <h2>Liquid Glass Classifier</h2>
+    <div class="logo"></div>
+
+    <h2>Liquid Glass AI Classifier</h2>
 
     <button onclick="startWebcam()">Start Webcam</button>
     <button onclick="startPredictionTimer()">Start Prediction Timer</button>
@@ -97,7 +123,7 @@ let model, webcam, labelContainer, maxPredictions;
 let timerRunning = false;
 let predictionInterval = null;
 
-// Load model automatically
+// Load model on page load
 (async () => {
     model = await tmImage.load(URL + "model.json", URL + "metadata.json");
     maxPredictions = model.getTotalClasses();
@@ -119,14 +145,14 @@ async function startWebcam() {
     }
 }
 
-// MAIN LOOP
+// LOOP (normal predictions)
 async function loop() {
     webcam.update();
     await predict();
     if (!timerRunning) window.requestAnimationFrame(loop);
 }
 
-// ALWAYS MAKES PREDICTIONS
+// ALWAYS makes predictions
 async function predict() {
     if (!model || !webcam) return;
     const prediction = await model.predict(webcam.canvas);
@@ -136,21 +162,20 @@ async function predict() {
     }
 }
 
-// START TIMER (3 SECONDS)
+// TIMER — stops webcam after 3 seconds
 function startPredictionTimer() {
     if (!webcam) return alert("Start the webcam first.");
-
     timerRunning = true;
 
-    predictionInterval = setInterval(() => {
+    predictionInterval = setTimeout(() => {
         webcam.stop();
     }, 3000);
 }
 
-// STOP TIMER — returns to normal predictions
+// STOP TIMER — return to normal predictions
 function stopPredictionTimer() {
     timerRunning = false;
-    clearInterval(predictionInterval);
+    clearTimeout(predictionInterval);
 
     if (webcam) {
         webcam.play();
@@ -158,11 +183,11 @@ function stopPredictionTimer() {
     }
 }
 
-// RESET TIMER — restarts webcam and timer
+// RESET TIMER — restart webcam + allow new timer
 function resetPredictionTimer() {
     if (!webcam) return;
 
-    clearInterval(predictionInterval);
+    clearTimeout(predictionInterval);
     timerRunning = false;
 
     webcam.play();
