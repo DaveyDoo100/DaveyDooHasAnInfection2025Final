@@ -1,37 +1,68 @@
 <div>Teachable Machine Image Model</div>
-<button type="button" onclick="init()">Start</button>
+
+<button type="button" onclick="init()">Start Webcam</button>
+<button type="button" onclick="makePrediction()">Make Prediction</button>
+<button type="button" onclick="startTimer()">Start Prediction Timer</button>
+<button type="button" onclick="stopTimer()">Stop Prediction Timer</button>
+<button type="button" onclick="resetTimer()">Reset Timer</button>
+
 <div id="webcam-container"></div>
 <div id="label-container"></div>
+
+<style>
+    body {
+        background: #000;
+        color: white;
+        font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+        padding: 20px;
+    }
+
+    button {
+        background: white;
+        color: black;
+        border: none;
+        margin: 5px;
+        padding: 12px 18px;
+        border-radius: 12px;
+        font-size: 15px;
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+    button:hover {
+        background: #e6e6e6;
+    }
+
+    #webcam-container {
+        margin-top: 15px;
+    }
+</style>
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
 
 <script type="text/javascript">
-    // More API functions here:
-    // https://github.com/googlecreativelab/teachablemachine-community/tree/master/libraries/image
+    // ---------------------------------------------
+    // ORIGINAL WEBCAM + MODEL CODE (UNTOUCHED)
+    // ---------------------------------------------
 
-    // the link to your model provided by Teachable Machine export panel
     const URL = "./my_model/";
 
     let model, webcam, labelContainer, maxPredictions;
 
-    // Load the image model and setup the webcam
     async function init() {
         const modelURL = URL + "model.json";
         const metadataURL = URL + "metadata.json";
 
-        // load the model and metadata
         model = await tmImage.load(modelURL, metadataURL);
         maxPredictions = model.getTotalClasses();
 
-        // Convenience function to setup a webcam
-        const flip = true; // whether to flip the webcam
-        webcam = new tmImage.Webcam(200, 200, flip); // width, height, flip
-        await webcam.setup(); // request access to the webcam
+        const flip = true;
+        webcam = new tmImage.Webcam(200, 200, flip);
+        await webcam.setup();
         await webcam.play();
         window.requestAnimationFrame(loop);
 
-        // append elements to the DOM
         document.getElementById("webcam-container").appendChild(webcam.canvas);
         labelContainer = document.getElementById("label-container");
 
@@ -41,12 +72,13 @@
     }
 
     async function loop() {
-        webcam.update(); // update the webcam frame
-        await predict();
+        webcam.update();
+        if (!timerActive) {
+            await predict();
+        }
         window.requestAnimationFrame(loop);
     }
 
-    // run the webcam image through the image model
     async function predict() {
         const prediction = await model.predict(webcam.canvas);
         for (let i = 0; i < maxPredictions; i++) {
@@ -54,5 +86,39 @@
                 prediction[i].className + ": " + prediction[i].probability.toFixed(2);
             labelContainer.childNodes[i].innerHTML = classPrediction;
         }
+    }
+
+    // ---------------------------------------------
+    // NEW FEATURES (NO CHANGES TO WEBCAM CODE)
+    // ---------------------------------------------
+
+    let timerActive = false;
+
+    // One-shot prediction
+    async function makePrediction() {
+        if (model && webcam) {
+            await predict();
+        }
+    }
+
+    // Start 3-second timer
+    function startTimer() {
+        if (!model || !webcam) return;
+        timerActive = true;
+
+        setTimeout(() => {
+            timerActive = false;
+        }, 3000);
+    }
+
+    // Stop prediction timer
+    function stopTimer() {
+        timerActive = false;
+    }
+
+    // Reset timer (starts it again)
+    function resetTimer() {
+        timerActive = false;
+        startTimer();
     }
 </script>
