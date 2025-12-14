@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Liquid Glass AI</title>
 
-<!-- REQUIRED LIBRARIES -->
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
 
@@ -21,19 +20,19 @@ body {
     color: white;
 }
 
-/* Glass card */
+/* Apple liquid glass card */
 .glass {
     width: 420px;
     padding: 30px;
     border-radius: 30px;
-    background: rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.10);
     backdrop-filter: blur(40px) saturate(180%);
     border: 1px solid rgba(255,255,255,0.18);
     box-shadow: 0 0 50px rgba(255,255,255,0.15);
     text-align: center;
 }
 
-/* Logo circle */
+/* Logo */
 .logo {
     width: 80px;
     height: 80px;
@@ -80,7 +79,7 @@ button:hover {
     <div class="logo"></div>
     <h2>Liquid Glass Classifier</h2>
 
-    <button onclick="startWebcam()">Start Webcam</button>
+    <button onclick="init()">Start Webcam</button>
     <button onclick="startPredictionTimer()">Start Prediction Timer</button>
     <button onclick="resetTimer()">Reset Timer</button>
 
@@ -88,59 +87,65 @@ button:hover {
     <div id="label-container"></div>
 </div>
 
-<script>
-const URL = "./my_model/";
-let model, webcam, labelContainer, maxPredictions;
-let timerID = null;
+<script type="text/javascript">
+/* =====================================================
+   ORIGINAL TEACHABLE MACHINE CODE — UNTOUCHED
+   ===================================================== */
 
-/* Load model once */
-(async () => {
-    model = await tmImage.load(URL + "model.json", URL + "metadata.json");
+const URL = "./my_model/";
+
+let model, webcam, labelContainer, maxPredictions;
+
+async function init() {
+    const modelURL = URL + "model.json";
+    const metadataURL = URL + "metadata.json";
+
+    model = await tmImage.load(modelURL, metadataURL);
     maxPredictions = model.getTotalClasses();
 
+    const flip = true;
+    webcam = new tmImage.Webcam(200, 200, flip);
+    await webcam.setup();
+    await webcam.play();
+    window.requestAnimationFrame(loop);
+
+    document.getElementById("webcam-container").innerHTML = "";
+    document.getElementById("webcam-container").appendChild(webcam.canvas);
+
     labelContainer = document.getElementById("label-container");
+    labelContainer.innerHTML = "";
     for (let i = 0; i < maxPredictions; i++) {
         labelContainer.appendChild(document.createElement("div"));
     }
-})();
-
-/* Start webcam + normal predictions */
-async function startWebcam() {
-    clearTimeout(timerID);
-
-    if (!webcam) {
-        webcam = new tmImage.Webcam(250, 250, true);
-        await webcam.setup();
-        await webcam.play();
-        document.getElementById("webcam-container").innerHTML = "";
-        document.getElementById("webcam-container").appendChild(webcam.canvas);
-        requestAnimationFrame(loop);
-    } else {
-        await webcam.play();
-        requestAnimationFrame(loop);
-    }
 }
 
-/* Prediction loop */
 async function loop() {
-    if (!webcam) return;
     webcam.update();
     await predict();
-    requestAnimationFrame(loop);
+    window.requestAnimationFrame(loop);
 }
 
-/* Predict */
 async function predict() {
     const prediction = await model.predict(webcam.canvas);
     for (let i = 0; i < maxPredictions; i++) {
-        labelContainer.childNodes[i].innerHTML =
+        const classPrediction =
             prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+        labelContainer.childNodes[i].innerHTML = classPrediction;
     }
 }
 
-/* Timer: stop webcam AFTER 5 seconds */
+/* =====================================================
+   ADDED FEATURES (NO CHANGES ABOVE)
+   ===================================================== */
+
+let timerID = null;
+
+// Stop webcam AFTER 5 seconds
 function startPredictionTimer() {
-    if (!webcam) return alert("Start the webcam first.");
+    if (!webcam) {
+        alert("Start the webcam first.");
+        return;
+    }
 
     clearTimeout(timerID);
     timerID = setTimeout(() => {
@@ -148,9 +153,10 @@ function startPredictionTimer() {
     }, 5000);
 }
 
-/* Reset = same as Start Webcam (NO TIMER) */
+// Reset = re-enable webcam by calling init again
 function resetTimer() {
-    startWebcam();
+    clearTimeout(timerID);
+    init();
 }
 </script>
 
