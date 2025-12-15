@@ -20,7 +20,6 @@ body {
     color: white;
 }
 
-/* Apple liquid glass card */
 .glass {
     width: 420px;
     padding: 30px;
@@ -32,14 +31,23 @@ body {
     text-align: center;
 }
 
-/* Logo */
 .logo {
     width: 80px;
     height: 80px;
     border-radius: 50%;
     background: linear-gradient(145deg,#fff,#ccc);
-    margin: 0 auto 15px;
+    margin: 0 auto 12px;
     box-shadow: 0 0 25px rgba(255,255,255,0.4);
+}
+
+h2 {
+    margin-bottom: 4px;
+}
+
+.disclaimer {
+    font-size: 11px;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 18px;
 }
 
 button {
@@ -79,6 +87,10 @@ button:hover {
     <div class="logo"></div>
     <h2>Infection/Cut Classifier</h2>
 
+    <div class="disclaimer">
+        DISCLAIMER: This is not perfect, and it's in an early development stage.
+    </div>
+
     <button onclick="init()">Start Webcam</button>
     <button onclick="startPredictionTimer()">Start Prediction Timer</button>
     <button onclick="resetTimer()">Reset Timer</button>
@@ -88,9 +100,7 @@ button:hover {
 </div>
 
 <script type="text/javascript">
-/* =====================================================
-   ORIGINAL TEACHABLE MACHINE CODE — UNTOUCHED
-   ===================================================== */
+/* ORIGINAL WEBCAM CODE — UNCHANGED */
 
 const URL = "./my_model/";
 
@@ -134,13 +144,10 @@ async function predict() {
     }
 }
 
-/* =====================================================
-   ADDED FEATURES (NO CHANGES ABOVE)
-   ===================================================== */
+/* TIMER FEATURES (SAFE) */
 
 let timerID = null;
 
-// Stop webcam AFTER 5 seconds
 function startPredictionTimer() {
     if (!webcam) {
         alert("Start the webcam first.");
@@ -153,7 +160,6 @@ function startPredictionTimer() {
     }, 5000);
 }
 
-// Reset = re-enable webcam by calling init again
 function resetTimer() {
     clearTimeout(timerID);
     init();
