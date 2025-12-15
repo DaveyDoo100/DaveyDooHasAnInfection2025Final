@@ -47,7 +47,7 @@ h2 {
 .disclaimer {
     font-size: 11px;
     color: rgba(255,255,255,0.6);
-    margin-bottom: 18px;
+    margin-bottom: 14px;
 }
 
 button {
@@ -65,6 +65,27 @@ button {
 
 button:hover {
     background: #e6e6e6;
+}
+
+.hidden {
+    display: none;
+}
+
+#countdown {
+    margin-top: 12px;
+    font-size: 18px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.85);
+}
+
+#help-box {
+    margin-top: 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: rgba(255,255,255,0.8);
+    background: rgba(255,255,255,0.15);
+    padding: 12px;
+    border-radius: 14px;
 }
 
 #webcam-container {
@@ -85,25 +106,37 @@ button:hover {
 
 <div class="glass">
     <div class="logo"></div>
-    <h2>Infection/Cut Classifier</h2>
+    <h2>The Cut Classifier</h2>
 
     <div class="disclaimer">
         DISCLAIMER: This is not perfect, and it's in an early development stage.
     </div>
 
-    <button onclick="init()">Start Webcam</button>
-    <button onclick="startPredictionTimer()">Start Prediction Timer</button>
-    <button onclick="resetTimer()">Reset Timer</button>
+    <button id="startBtn" onclick="startWebcamUI()">Start Webcam</button>
+
+    <button id="timerBtn" class="hidden" onclick="startPredictionTimer()">Start Prediction Timer</button>
+    <button id="resetBtn" class="hidden" onclick="resetTimer()">Reset Timer</button>
+
+    <div id="countdown" class="hidden"></div>
+
+    <button onclick="toggleHelp()">Help?</button>
+
+    <div id="help-box" class="hidden">
+        <strong>Start Webcam:</strong> Turns on the camera and begins predictions.<br>
+        <strong>Start Prediction Timer:</strong> Stops the webcam after 5 seconds.<br>
+        <strong>Reset Timer:</strong> Restarts the webcam and predictions.
+    </div>
 
     <div id="webcam-container"></div>
     <div id="label-container"></div>
 </div>
 
 <script type="text/javascript">
-/* ORIGINAL WEBCAM CODE — UNCHANGED */
+/* =====================================================
+   ORIGINAL TEACHABLE MACHINE WEBCAM CODE (UNCHANGED)
+   ===================================================== */
 
 const URL = "./my_model/";
-
 let model, webcam, labelContainer, maxPredictions;
 
 async function init() {
@@ -138,31 +171,69 @@ async function loop() {
 async function predict() {
     const prediction = await model.predict(webcam.canvas);
     for (let i = 0; i < maxPredictions; i++) {
-        const classPrediction =
+        labelContainer.childNodes[i].innerHTML =
             prediction[i].className + ": " + prediction[i].probability.toFixed(2);
-        labelContainer.childNodes[i].innerHTML = classPrediction;
     }
 }
 
-/* TIMER FEATURES (SAFE) */
+/* =====================================================
+   UI + TIMER + COUNTDOWN
+   ===================================================== */
 
 let timerID = null;
+let countdownID = null;
+
+function startWebcamUI() {
+    init();
+
+    document.getElementById("startBtn").classList.add("hidden");
+    document.getElementById("timerBtn").classList.remove("hidden");
+    document.getElementById("resetBtn").classList.remove("hidden");
+
+    clearCountdown();
+}
 
 function startPredictionTimer() {
-    if (!webcam) {
-        alert("Start the webcam first.");
-        return;
-    }
+    if (!webcam) return;
 
     clearTimeout(timerID);
+    clearInterval(countdownID);
+
+    let timeLeft = 5;
+    const countdownEl = document.getElementById("countdown");
+    countdownEl.classList.remove("hidden");
+    countdownEl.innerText = `Stopping in ${timeLeft}...`;
+
+    countdownID = setInterval(() => {
+        timeLeft--;
+        countdownEl.innerText = `Stopping in ${timeLeft}...`;
+
+        if (timeLeft <= 0) {
+            clearInterval(countdownID);
+        }
+    }, 1000);
+
     timerID = setTimeout(() => {
         webcam.stop();
+        countdownEl.innerText = "Webcam stopped";
     }, 5000);
 }
 
 function resetTimer() {
     clearTimeout(timerID);
+    clearInterval(countdownID);
     init();
+    clearCountdown();
+}
+
+function clearCountdown() {
+    const countdownEl = document.getElementById("countdown");
+    countdownEl.classList.add("hidden");
+    countdownEl.innerText = "";
+}
+
+function toggleHelp() {
+    document.getElementById("help-box").classList.toggle("hidden");
 }
 </script>
 
