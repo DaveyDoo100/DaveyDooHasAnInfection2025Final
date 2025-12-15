@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Infection AI</title>
+<title>The Cut Classifier</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
@@ -47,7 +47,14 @@ h2 {
 .disclaimer {
     font-size: 11px;
     color: rgba(255,255,255,0.6);
-    margin-bottom: 14px;
+    margin-bottom: 10px;
+}
+
+.description {
+    font-size: 13px;
+    line-height: 1.5;
+    color: rgba(255,255,255,0.8);
+    margin-bottom: 18px;
 }
 
 button {
@@ -106,10 +113,16 @@ button:hover {
 
 <div class="glass">
     <div class="logo"></div>
-    <h2>The Cut Classifier</h2>
+    <h2>Cut Classifier</h2>
 
     <div class="disclaimer">
         DISCLAIMER: This is not perfect, and it's in an early development stage.
+    </div>
+
+    <div class="description">
+        Small cuts on hands can appear harmless but may develop infections if ignored.
+        This project uses machine learning to help identify whether a cut could pose a higher risk.
+        It may benefit students, athletes, and people who frequently work with their hands.
     </div>
 
     <button id="startBtn" onclick="startWebcamUI()">Start Webcam</button>
