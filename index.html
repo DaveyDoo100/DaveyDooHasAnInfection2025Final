@@ -3,23 +3,46 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Cut Classifier</title>
+<title>Cut Clasifier</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
 
 <style>
+/* ===== Background ===== */
 body {
     margin: 0;
-    background: #000;
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    height: 100vh;
+    background: radial-gradient(circle at top left, #1c1c1c, #000),
+                radial-gradient(circle at bottom right, #111, #000);
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
     color: white;
+    overflow: hidden;
 }
 
+/* Soft glow accents */
+body::before,
+body::after {
+    content: "";
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(255,255,255,0.15), transparent);
+    filter: blur(60px);
+}
+body::before {
+    top: -80px;
+    left: -80px;
+}
+body::after {
+    bottom: -80px;
+    right: -80px;
+}
+
+/* ===== Glass Card ===== */
 .glass {
     width: 420px;
     padding: 30px;
@@ -27,15 +50,18 @@ body {
     background: rgba(255,255,255,0.10);
     backdrop-filter: blur(40px) saturate(180%);
     border: 1px solid rgba(255,255,255,0.18);
-    box-shadow: 0 0 50px rgba(255,255,255,0.15);
+    box-shadow: 0 0 60px rgba(255,255,255,0.18);
     text-align: center;
+    position: relative;
+    z-index: 2;
 }
 
+/* Logo */
 .logo {
     width: 80px;
     height: 80px;
     border-radius: 50%;
-    background: linear-gradient(145deg,#fff,#ccc);
+    background: linear-gradient(145deg,#fff,#cfcfcf);
     margin: 0 auto 12px;
     box-shadow: 0 0 25px rgba(255,255,255,0.4);
 }
@@ -44,6 +70,7 @@ h2 {
     margin-bottom: 4px;
 }
 
+/* Text blocks */
 .disclaimer {
     font-size: 11px;
     color: rgba(255,255,255,0.6);
@@ -57,6 +84,7 @@ h2 {
     margin-bottom: 18px;
 }
 
+/* Buttons */
 button {
     width: 100%;
     padding: 14px;
@@ -68,33 +96,38 @@ button {
     font-weight: 600;
     font-size: 15px;
     cursor: pointer;
+    transition: transform 0.15s ease;
 }
 
 button:hover {
     background: #e6e6e6;
+    transform: scale(1.02);
 }
 
 .hidden {
     display: none;
 }
 
+/* Countdown */
 #countdown {
     margin-top: 12px;
     font-size: 18px;
     font-weight: 600;
-    color: rgba(255,255,255,0.85);
+    color: rgba(255,255,255,0.9);
 }
 
+/* Instructions box */
 #help-box {
     margin-top: 14px;
     font-size: 13px;
     line-height: 1.5;
-    color: rgba(255,255,255,0.8);
+    color: rgba(255,255,255,0.85);
     background: rgba(255,255,255,0.15);
     padding: 12px;
     border-radius: 14px;
 }
 
+/* Webcam + labels */
 #webcam-container {
     margin-top: 20px;
 }
@@ -113,7 +146,7 @@ button:hover {
 
 <div class="glass">
     <div class="logo"></div>
-    <h2>Cut Classifier</h2>
+    <h2>The Cut Classifier</h2>
 
     <div class="disclaimer">
         DISCLAIMER: This is not perfect, and it's in an early development stage.
@@ -132,7 +165,7 @@ button:hover {
 
     <div id="countdown" class="hidden"></div>
 
-    <button onclick="toggleHelp()">Help?</button>
+    <button onclick="toggleHelp()">Instructions</button>
 
     <div id="help-box" class="hidden">
         <strong>Start Webcam:</strong> Turns on the camera and begins predictions.<br>
@@ -145,9 +178,7 @@ button:hover {
 </div>
 
 <script type="text/javascript">
-/* =====================================================
-   ORIGINAL TEACHABLE MACHINE WEBCAM CODE (UNCHANGED)
-   ===================================================== */
+/* ===== ORIGINAL TEACHABLE MACHINE WEBCAM CODE (UNCHANGED) ===== */
 
 const URL = "./my_model/";
 let model, webcam, labelContainer, maxPredictions;
@@ -189,9 +220,7 @@ async function predict() {
     }
 }
 
-/* =====================================================
-   UI + TIMER + COUNTDOWN
-   ===================================================== */
+/* ===== UI + TIMER + COUNTDOWN ===== */
 
 let timerID = null;
 let countdownID = null;
@@ -221,9 +250,7 @@ function startPredictionTimer() {
         timeLeft--;
         countdownEl.innerText = `Stopping in ${timeLeft}...`;
 
-        if (timeLeft <= 0) {
-            clearInterval(countdownID);
-        }
+        if (timeLeft <= 0) clearInterval(countdownID);
     }, 1000);
 
     timerID = setTimeout(() => {
